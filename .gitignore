@@ -1,8 +1,6 @@
-AppFlow.md
-Git.md
-Implementation.md
-Schema.md
-TechStack.md
-TestPlan.md
+
 CLAUDE.md
-PRD.md
+.docs
+node_modules/
+.DS_Store
+*.zip
