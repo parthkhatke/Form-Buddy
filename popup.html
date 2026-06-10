@@ -230,6 +230,68 @@
       border-bottom: 1px solid var(--border);
     }
 
+    /* Autofill tab stats */
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 4px 0 16px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+    }
+    .stat-num {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent-text);
+      line-height: 1.2;
+    }
+    .stat-label { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+
+    /* History tab */
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-initials {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent-text);
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .history-main { flex: 1; min-width: 0; }
+    .history-host {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-meta { font-size: 11px; color: var(--text-soft); }
+    .history-count {
+      padding: 2px 7px;
+      border-radius: 99px;
+      background: var(--accent-soft);
+      color: var(--accent-text);
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
     /* Autofill tab */
     .check-row {
       display: flex;
@@ -397,6 +459,16 @@
     </section>
 
     <section class="panel" id="panel-autofill">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-num" id="statFields">0</div>
+          <div class="stat-label">Fields filled today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statForms">0</div>
+          <div class="stat-label">Forms completed today</div>
+        </div>
+      </div>
       <div class="section-head">
         <span class="section-title">Fill groups</span>
       </div>
@@ -416,7 +488,7 @@
     </section>
 
     <section class="panel" id="panel-history">
-      <div class="placeholder-panel">Coming in next phase</div>
+      <div id="historyList"></div>
     </section>
   </main>
 

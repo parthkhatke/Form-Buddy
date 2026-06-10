@@ -188,11 +188,121 @@ async function runAutofill() {
     const count = (response && response.filled) || 0;
     showBanner(count > 0 ? 'Filled ' + count + ' fields ✓' : 'Filled 0 fields', 'success');
     await updateStats(count);
+    await renderStats();
+    if (count > 0) {
+      await addHistoryEntry(tab, count);
+      await renderHistory();
+    }
   } catch (e) {
     showBanner('Could not reach this page. Reload the tab and try again.', 'error');
   } finally {
     autofillBusy = false;
     btn.disabled = false;
+  }
+}
+
+// reset stale counters in storage on popup open, then display
+async function renderStats() {
+  const data = await chrome.storage.local.get('stats');
+  const today = new Date().toDateString();
+  let stats = data.stats || { fieldsToday: 0, formsToday: 0, lastDate: '' };
+  if (stats.lastDate !== today) {
+    stats = { fieldsToday: 0, formsToday: 0, lastDate: today };
+    await chrome.storage.local.set({ stats });
+  }
+  $('statFields').textContent = stats.fieldsToday;
+  $('statForms').textContent = stats.formsToday;
+}
+
+/* ---------- history ---------- */
+
+function hostKeyFromUrl(url) {
+  try {
+    return new URL(url).hostname || 'local-file';
+  } catch (e) {
+    return 'local-file';
+  }
+}
+
+function timeAgo(time) {
+  const diff = Date.now() - time;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  return Math.floor(diff / 86400000) + 'd ago';
+}
+
+async function addHistoryEntry(tab, count) {
+  const data = await chrome.storage.local.get('history');
+  const history = data.history || [];
+  history.unshift({
+    hostname: hostKeyFromUrl(tab.url),
+    title: tab.title || '',
+    url: tab.url || '',
+    count,
+    time: Date.now(),
+  });
+  await chrome.storage.local.set({ history: history.slice(0, 50) });
+}
+
+// clears the site's learned memory and its history rows
+async function clearSite(hostname) {
+  const data = await chrome.storage.local.get(['siteMemory', 'history']);
+  const siteMemory = data.siteMemory || {};
+  delete siteMemory[hostname];
+  const history = (data.history || []).filter((h) => h.hostname !== hostname);
+  await chrome.storage.local.set({ siteMemory, history });
+  await renderHistory();
+  showBanner('Cleared ' + hostname, 'success');
+}
+
+async function renderHistory() {
+  const data = await chrome.storage.local.get('history');
+  const history = data.history || [];
+  const list = $('historyList');
+  list.textContent = '';
+
+  if (history.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'placeholder-panel';
+    empty.textContent = 'No fills yet. Hit Autofill Page on any web form.';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const entry of history) {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+
+    const initials = document.createElement('div');
+    initials.className = 'history-initials';
+    initials.textContent = entry.hostname.replace(/^www\./, '').slice(0, 2);
+
+    const main = document.createElement('div');
+    main.className = 'history-main';
+    const host = document.createElement('div');
+    host.className = 'history-host';
+    host.textContent = entry.hostname;
+    const meta = document.createElement('div');
+    meta.className = 'history-meta';
+    meta.textContent = timeAgo(entry.time);
+    main.appendChild(host);
+    main.appendChild(meta);
+
+    const count = document.createElement('span');
+    count.className = 'history-count';
+    count.textContent = entry.count + ' fields';
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'row-btn danger';
+    clearBtn.textContent = 'Clear';
+    clearBtn.addEventListener('click', () => clearSite(entry.hostname));
+
+    row.appendChild(initials);
+    row.appendChild(main);
+    row.appendChild(count);
+    row.appendChild(clearBtn);
+    list.appendChild(row);
   }
 }
 
@@ -219,6 +329,8 @@ async function init() {
   }
   renderCustomFields();
   updateBadge();
+  await renderStats();
+  await renderHistory();
 }
 
 function wireEvents() {
