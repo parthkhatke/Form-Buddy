@@ -46,6 +46,15 @@ function buildHaystack(el) {
   ].join(' ').toLowerCase();
 }
 
+// Approach B identifier for a text/select field: first non-empty of
+// name, id, placeholder, label text - normalised
+function deriveIdentifier(el) {
+  return normalizeIdentifier(el.name) ||
+    normalizeIdentifier(el.id) ||
+    normalizeIdentifier(el.getAttribute('placeholder')) ||
+    normalizeIdentifier(getLabelText(el));
+}
+
 function isCreditCardField(el) {
   return ((el.getAttribute('autocomplete') || '').toLowerCase()).includes('cc-');
 }
@@ -165,6 +174,19 @@ async function saveToSiteMemory(identifier, value) {
   if (!siteMemory[host]) siteMemory[host] = {};
   siteMemory[host][identifier] = value;
   await chrome.storage.local.set({ siteMemory });
+}
+
+// record user edits to text/textarea/select fields (change fires only
+// when the value was actually modified and the field loses focus)
+function attachFieldRecording(el, identifier) {
+  if (!identifier || recordingAttached.has(el)) return;
+  recordingAttached.add(el);
+  el.addEventListener('change', () => {
+    const value = el.tagName.toLowerCase() === 'select'
+      ? (el.selectedOptions[0] ? el.selectedOptions[0].text.trim() : el.value)
+      : el.value;
+    saveToSiteMemory(identifier, value);
+  });
 }
 
 function attachRadioRecording(radios, identifier) {
@@ -288,16 +310,23 @@ async function fillPage(profile, customFields, groups) {
 
     if (shouldSkip(el)) continue;
 
-    const haystack = buildHaystack(el);
-    const value = matchValue(haystack, profile, customFields, groups);
-    if (value === null) continue;
+    // site memory first (remembered corrections beat heuristics),
+    // then keyword matching; stale identifiers simply never match
+    const identifier = deriveIdentifier(el);
+    const remembered = identifier && siteMem[identifier] !== undefined ? siteMem[identifier] : null;
+    const value = (remembered !== null && remembered !== '')
+      ? remembered
+      : matchValue(buildHaystack(el), profile, customFields, groups);
 
-    if (tag === 'select') {
-      if (fillSelect(el, value)) filled++;
-    } else {
-      setNativeValue(el, value);
-      filled++;
+    if (value !== null) {
+      if (tag === 'select') {
+        if (fillSelect(el, value)) filled++;
+      } else {
+        setNativeValue(el, value);
+        filled++;
+      }
     }
+    attachFieldRecording(el, identifier);
   }
 
   filled += fillRadioGroups(radios, siteMem, customFields, groups);
