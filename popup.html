@@ -124,7 +124,14 @@
     main::-webkit-scrollbar-thumb:hover { background: #b9c6c1; }
     main::-webkit-scrollbar-track { background: transparent; }
     .panel { display: none; padding: 14px 16px 16px; }
-    .panel.active { display: block; }
+    .panel.active { display: block; animation: panel-in 0.15s ease; }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .panel.active { animation: none; }
+    }
 
     .placeholder-panel {
       padding: 40px 0;
@@ -313,6 +320,12 @@
       font-size: 11px;
     }
     .btn:disabled { opacity: 0.55; cursor: default; }
+    .hint {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--placeholder);
+      text-align: center;
+    }
 
     /* Add / edit field form */
     .field-form {
@@ -382,7 +395,15 @@
     <img class="logo" src="icons/icon48.png" alt="" width="22" height="22">
     <span class="brand">Form Buddy</span>
     <span class="header-spacer"></span>
-    <button class="icon-btn" id="exportBtn" title="Export profile (available in a later phase)" aria-label="Export profile">
+    <button class="icon-btn" id="importBtn" title="Import profile" aria-label="Import profile">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 10V2"/>
+        <path d="M5 5l3-3 3 3"/>
+        <path d="M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1"/>
+      </svg>
+    </button>
+    <input type="file" id="importInput" accept="application/json,.json" hidden>
+    <button class="icon-btn" id="exportBtn" title="Export profile" aria-label="Export profile">
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M8 2v8"/>
         <path d="M5 7l3 3 3-3"/>
@@ -485,6 +506,7 @@
       <div class="save-wrap">
         <button class="btn btn-primary" id="autofillBtn">Autofill Page</button>
       </div>
+      <p class="hint">Tip: press Alt+Shift+F to open Form Buddy on any page</p>
     </section>
 
     <section class="panel" id="panel-history">

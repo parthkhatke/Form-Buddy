@@ -104,21 +104,90 @@ function setNativeValue(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function normalizeFuzzy(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// tiers: exact match > containment > all target words present ("30 days"
+// matches "30 Days Notice"); best score wins
 function fillSelect(el, value) {
-  const target = String(value).toLowerCase().trim();
+  const target = normalizeFuzzy(value);
   if (target === '') return false;
+  const targetTokens = target.split(' ');
+  let best = -1;
+  let bestScore = 0;
   for (let i = 0; i < el.options.length; i++) {
-    const text = el.options[i].text.toLowerCase().trim();
-    const optValue = el.options[i].value.toLowerCase().trim();
-    const textMatch = text !== '' && (text.includes(target) || target.includes(text));
-    if (textMatch || optValue === target) {
-      el.selectedIndex = i;
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
-    }
+    const text = normalizeFuzzy(el.options[i].text);
+    const optValue = normalizeFuzzy(el.options[i].value);
+    let score = 0;
+    if (text === target || optValue === target) score = 3;
+    else if (text !== '' && (text.includes(target) || target.includes(text))) score = 2;
+    else if (text !== '' && targetTokens.every((t) => text.includes(t))) score = 1;
+    if (score > bestScore) { bestScore = score; best = i; }
   }
-  return false;
+  if (best === -1) return false;
+  el.selectedIndex = best;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+/* ---------- shadow DOM + dynamic forms ---------- */
+
+// collect form fields from the document AND any open shadow roots
+function collectFields(root) {
+  const out = [];
+  const walk = (node) => {
+    for (const el of node.querySelectorAll('input, textarea, select')) out.push(el);
+    for (const el of node.querySelectorAll('*')) {
+      if (el.shadowRoot) walk(el.shadowRoot);
+    }
+  };
+  walk(root);
+  return out;
+}
+
+const tooltipShown = new WeakSet();
+
+function showFileTooltip(el) {
+  el.title = 'Upload file manually';
+  if (tooltipShown.has(el)) return;
+  tooltipShown.add(el);
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return;
+  const tip = document.createElement('div');
+  tip.textContent = 'Upload file manually';
+  tip.style.cssText = 'position:absolute;z-index:2147483647;background:#1c2624;color:#f2f6f5;' +
+    'padding:4px 9px;border-radius:6px;font:12px/1.4 sans-serif;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.25);';
+  tip.style.left = (rect.left + window.scrollX) + 'px';
+  tip.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  document.body.appendChild(tip);
+  setTimeout(() => tip.remove(), 4000);
+}
+
+// SPA support: for 3 seconds after a fill, refill when new fields appear
+let spaObserver = null;
+let spaStopTimer = null;
+let refillTimer = null;
+
+function watchForLateFields(profile, customFields, groups) {
+  if (spaObserver) spaObserver.disconnect();
+  clearTimeout(spaStopTimer);
+  clearTimeout(refillTimer);
+  spaObserver = new MutationObserver((mutations) => {
+    const hasNewField = mutations.some((m) => [...m.addedNodes].some((n) =>
+      n.nodeType === 1 &&
+      ((n.matches && n.matches('input, textarea, select')) ||
+       (n.querySelector && n.querySelector('input, textarea, select')))));
+    if (!hasNewField) return;
+    clearTimeout(refillTimer);
+    refillTimer = setTimeout(() => fillPage(profile, customFields, groups), 200);
+  });
+  spaObserver.observe(document.body, { childList: true, subtree: true });
+  spaStopTimer = setTimeout(() => {
+    spaObserver.disconnect();
+    spaObserver = null;
+  }, 3000);
 }
 
 /* ---------- radio groups and checkboxes ---------- */
@@ -294,13 +363,18 @@ async function fillPage(profile, customFields, groups) {
   const siteMem = siteMemory[getHostKey()] || {};
 
   const radios = [];
-  const elements = document.querySelectorAll('input, textarea, select');
+  const elements = collectFields(document);
 
   for (const el of elements) {
     const tag = el.tagName.toLowerCase();
     const type = (el.type || '').toLowerCase();
 
     if (tag === 'input' && type === 'radio') { radios.push(el); continue; }
+
+    if (tag === 'input' && type === 'file' && !el.disabled) {
+      showFileTooltip(el);
+      continue;
+    }
 
     if (tag === 'input' && type === 'checkbox') {
       if (el.readOnly) continue;
@@ -338,8 +412,14 @@ async function fillPage(profile, customFields, groups) {
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message && message.action === 'fill') {
-      fillPage(message.profile || {}, message.customFields || [], message.groups || { fixed: true, custom: true })
-        .then((count) => sendResponse({ filled: count }))
+      const profile = message.profile || {};
+      const customFields = message.customFields || [];
+      const groups = message.groups || { fixed: true, custom: true };
+      fillPage(profile, customFields, groups)
+        .then((count) => {
+          sendResponse({ filled: count });
+          watchForLateFields(profile, customFields, groups);
+        })
         .catch(() => sendResponse({ filled: 0 }));
       return true; // async response
     }

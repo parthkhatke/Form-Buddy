@@ -175,6 +175,7 @@ async function runAutofill() {
   autofillBusy = true;
   const btn = $('autofillBtn');
   btn.disabled = true;
+  btn.textContent = 'Filling...';
   try {
     const groups = { fixed: $('groupFixed').checked, custom: $('groupCustom').checked };
     const data = await chrome.storage.local.get(['profile', 'customFields']);
@@ -198,6 +199,7 @@ async function runAutofill() {
   } finally {
     autofillBusy = false;
     btn.disabled = false;
+    btn.textContent = 'Autofill Page';
   }
 }
 
@@ -306,6 +308,65 @@ async function renderHistory() {
   }
 }
 
+/* ---------- export / import ---------- */
+
+async function exportProfile() {
+  const data = await chrome.storage.local.get(['profile', 'customFields']);
+  const json = JSON.stringify({
+    profile: data.profile || {},
+    customFields: data.customFields || [],
+  }, null, 2);
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'formbuddy-profile.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showBanner('Profile exported ✓', 'success');
+}
+
+// returns a clean { profile, customFields } or null when the file is not usable
+function parseImportedProfile(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    return null;
+  }
+  if (!data || typeof data.profile !== 'object' || data.profile === null || !Array.isArray(data.customFields)) {
+    return null;
+  }
+  const profile = {};
+  for (const field of FIXED_FIELDS) {
+    profile[field] = typeof data.profile[field] === 'string' ? data.profile[field] : '';
+  }
+  const fields = data.customFields
+    .filter((f) => f && typeof f.label === 'string' && f.label !== '')
+    .map((f) => ({
+      id: typeof f.id === 'string' && f.id !== ''
+        ? f.id
+        : Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+      label: f.label,
+      value: typeof f.value === 'string' ? f.value : '',
+      keywords: Array.isArray(f.keywords)
+        ? f.keywords.filter((k) => typeof k === 'string').map((k) => k.trim().toLowerCase()).filter((k) => k !== '')
+        : [],
+    }));
+  return { profile, customFields: fields };
+}
+
+async function importProfileText(text) {
+  const parsed = parseImportedProfile(text);
+  if (parsed === null) {
+    showBanner('Invalid file', 'error');
+    return false;
+  }
+  await chrome.storage.local.set(parsed);
+  await init();
+  showBanner('Profile imported ✓', 'success');
+  return true;
+}
+
 /* ---------- tabs ---------- */
 
 function activateTab(name) {
@@ -344,6 +405,14 @@ function wireEvents() {
   $('addFieldBtn').addEventListener('click', () => openFieldForm(null));
   $('fieldSaveBtn').addEventListener('click', saveFieldForm);
   $('autofillBtn').addEventListener('click', runAutofill);
+  $('exportBtn').addEventListener('click', exportProfile);
+  $('importBtn').addEventListener('click', () => $('importInput').click());
+  $('importInput').addEventListener('change', async () => {
+    const file = $('importInput').files[0];
+    if (!file) return;
+    await importProfileText(await file.text());
+    $('importInput').value = '';
+  });
   $('fieldCancelBtn').addEventListener('click', closeFieldForm);
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => activateTab(tab.dataset.tab));
