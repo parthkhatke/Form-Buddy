@@ -3,9 +3,397 @@
 <head>
   <meta charset="UTF-8">
   <title>Form Buddy</title>
+  <style>
+    @font-face {
+      font-family: "Space Grotesk";
+      src: url("fonts/space-grotesk.woff2") format("woff2");
+      font-weight: 400 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("fonts/jetbrains-mono.woff2") format("woff2");
+      font-weight: 400 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --bg: #0e0e11;
+      --surface: #131318;
+      --raised: #1a1a20;
+      --border: #2b2b33;
+      --text: #eeedf0;
+      --text-soft: #9e9da8;
+      --placeholder: #90909c;
+      --accent: #ff5e3a;
+      --accent-hover: #ff7656;
+      --accent-text: #ff8a6b;
+      --accent-soft: rgba(255, 94, 58, 0.12);
+      --on-accent: #1c0708;
+      --grad: linear-gradient(100deg, #ff5e3a, #ff2e88);
+      --grad-hover: linear-gradient(100deg, #ff7656, #ff4f9c);
+      --success: #54d68c;
+      --success-bg: rgba(52, 192, 124, 0.12);
+      --error: #ff7a7e;
+      --error-bg: rgba(229, 72, 77, 0.12);
+      --radius: 8px;
+      --radius-lg: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 380px;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px/1.45 "Space Grotesk", -apple-system, "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      height: 48px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .logo {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #ff5e3a, #ff2e88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo svg { display: block; }
+    .brand { font-size: 14px; font-weight: 600; letter-spacing: 0.01em; }
+    .header-spacer { flex: 1; }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-soft);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-btn:hover { background: var(--raised); color: var(--text); }
+    .icon-btn:active { transform: scale(0.96); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .tab {
+      flex: 1;
+      height: 36px;
+      border: none;
+      background: transparent;
+      color: var(--text-soft);
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); }
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 24%;
+      right: 24%;
+      bottom: -1px;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #ff5e3a, #ff2e88);
+    }
+
+    /* Panels */
+    main { max-height: 500px; overflow-y: auto; }
+    main::-webkit-scrollbar { width: 8px; }
+    main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    main::-webkit-scrollbar-thumb:hover { background: #3a3f4b; }
+    main::-webkit-scrollbar-track { background: transparent; }
+    .panel { display: none; padding: 14px 16px 16px; }
+    .panel.active { display: block; }
+
+    .placeholder-panel {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-soft);
+    }
+
+    /* Section heads */
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 4px 0 10px;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+    .badge {
+      display: none;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--accent-soft);
+      color: var(--accent-text);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge.show { display: inline-block; }
+
+    /* Form fields */
+    .field { margin-bottom: 10px; }
+    .field label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+    .field input {
+      width: 100%;
+      padding: 7px 10px;
+      background: var(--raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font: inherit;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 12px;
+    }
+    .field input::placeholder { color: var(--placeholder); }
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent-hover);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Custom field list */
+    .custom-list { border-top: 1px solid var(--border); }
+    .custom-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .custom-row-main { flex: 1; min-width: 0; }
+    .custom-row-label { font-weight: 500; }
+    .custom-row-value {
+      color: var(--text-soft);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 11.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .custom-row-keywords {
+      color: var(--placeholder);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .row-btn {
+      border: none;
+      background: transparent;
+      color: var(--accent-text);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .row-btn:hover { background: var(--raised); }
+    .row-btn.danger { color: var(--error); }
+    .empty {
+      padding: 14px 0;
+      color: var(--text-soft);
+      font-size: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Add / edit field form */
+    .field-form {
+      display: none;
+      margin-top: 10px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .field-form.show { display: block; }
+    .field-form-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+    .field-form-actions { display: flex; gap: 8px; margin-top: 2px; }
+
+    /* Buttons */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      border: none;
+      border-radius: var(--radius);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--grad); color: var(--on-accent); }
+    .btn-primary:hover { background: var(--grad-hover); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 500;
+    }
+    .btn-ghost:hover { background: var(--raised); }
+    .btn-add {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--accent-text);
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    .btn-add:hover { border-color: var(--accent-hover); background: var(--accent-soft); }
+    .save-wrap { margin-top: 16px; }
+
+    /* Status banner */
+    .banner {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      z-index: 10;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+    .banner.show { opacity: 1; }
+    .banner.success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52, 192, 124, 0.3); }
+    .banner.error { background: var(--error-bg); color: var(--error); border: 1px solid rgba(229, 72, 77, 0.3); }
+  </style>
 </head>
 <body>
-  <h1>Form Buddy</h1>
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <rect x="1" y="2" width="10" height="2" rx="1" fill="#1c0708"/>
+        <rect x="1" y="6" width="7" height="2" rx="1" fill="#1c0708"/>
+        <rect x="1" y="10" width="4" height="2" rx="1" fill="#1c0708"/>
+      </svg>
+    </div>
+    <span class="brand">Form Buddy</span>
+    <span class="header-spacer"></span>
+    <button class="icon-btn" id="exportBtn" title="Export profile (available in a later phase)" aria-label="Export profile">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v8"/>
+        <path d="M5 7l3 3 3-3"/>
+        <path d="M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1"/>
+      </svg>
+    </button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="profile">Profile</button>
+    <button class="tab" data-tab="autofill">Autofill</button>
+    <button class="tab" data-tab="history">History</button>
+  </nav>
+
+  <main>
+    <section class="panel active" id="panel-profile">
+      <div class="section-head">
+        <span class="section-title">Fixed fields</span>
+        <span class="badge" id="completeBadge">Profile complete</span>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label for="firstName">First name</label>
+          <input type="text" id="firstName" placeholder="Riya">
+        </div>
+        <div class="field">
+          <label for="lastName">Last name</label>
+          <input type="text" id="lastName" placeholder="Sharma">
+        </div>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="text" id="email" placeholder="riya@example.com">
+      </div>
+      <div class="field">
+        <label for="phone">Phone</label>
+        <input type="text" id="phone" placeholder="9876543210">
+      </div>
+      <div class="field">
+        <label for="city">City</label>
+        <input type="text" id="city" placeholder="Mumbai">
+      </div>
+
+      <div class="section-head" style="margin-top: 18px;">
+        <span class="section-title">Custom fields</span>
+      </div>
+      <div class="custom-list" id="customList"></div>
+      <button class="btn btn-add" id="addFieldBtn">+ Add field</button>
+
+      <div class="field-form" id="fieldForm">
+        <div class="field-form-title" id="fieldFormTitle">Add field</div>
+        <div class="field">
+          <label for="fieldLabel">Label</label>
+          <input type="text" id="fieldLabel" placeholder="Passport Number">
+        </div>
+        <div class="field">
+          <label for="fieldValue">Value</label>
+          <input type="text" id="fieldValue" placeholder="P1234567">
+        </div>
+        <div class="field">
+          <label for="fieldKeywords">Keywords (comma separated)</label>
+          <input type="text" id="fieldKeywords" placeholder="passport, document, id">
+        </div>
+        <div class="field-form-actions">
+          <button class="btn btn-primary" id="fieldSaveBtn">Save field</button>
+          <button class="btn btn-ghost" id="fieldCancelBtn">Cancel</button>
+        </div>
+      </div>
+
+      <div class="save-wrap">
+        <button class="btn btn-primary" id="saveBtn">Save profile</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-autofill">
+      <div class="placeholder-panel">Coming in next phase</div>
+    </section>
+
+    <section class="panel" id="panel-history">
+      <div class="placeholder-panel">Coming in next phase</div>
+    </section>
+  </main>
+
+  <div class="banner" id="banner" role="status"></div>
+
   <script src="popup.js"></script>
 </body>
 </html>
