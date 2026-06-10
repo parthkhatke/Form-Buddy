@@ -20,24 +20,25 @@
     }
 
     :root {
-      --bg: #0e0e11;
-      --surface: #131318;
-      --raised: #1a1a20;
-      --border: #2b2b33;
-      --text: #eeedf0;
-      --text-soft: #9e9da8;
-      --placeholder: #90909c;
-      --accent: #ff5e3a;
-      --accent-hover: #ff7656;
-      --accent-text: #ff8a6b;
-      --accent-soft: rgba(255, 94, 58, 0.12);
-      --on-accent: #1c0708;
-      --grad: linear-gradient(100deg, #ff5e3a, #ff2e88);
-      --grad-hover: linear-gradient(100deg, #ff7656, #ff4f9c);
-      --success: #54d68c;
-      --success-bg: rgba(52, 192, 124, 0.12);
-      --error: #ff7a7e;
-      --error-bg: rgba(229, 72, 77, 0.12);
+      --bg: #f2f6f5;
+      --surface: #fbfdfc;
+      --raised: #fdfefe;
+      --hover: #e6eeec;
+      --border: #dce4e1;
+      --text: #1c2624;
+      --text-soft: #586663;
+      --placeholder: #647370;
+      --accent: #14b8a6;
+      --accent-hover: #0ea895;
+      --accent-text: #0b7d6e;
+      --accent-soft: rgba(20, 184, 166, 0.14);
+      --on-accent: #06312b;
+      --yellow-soft: rgba(249, 200, 74, 0.3);
+      --yellow-text: #6b4e07;
+      --success: #0c7d3f;
+      --success-bg: rgba(22, 163, 74, 0.12);
+      --error: #c0353a;
+      --error-bg: rgba(220, 60, 65, 0.1);
       --radius: 8px;
       --radius-lg: 10px;
     }
@@ -66,13 +67,9 @@
       width: 22px;
       height: 22px;
       border-radius: 6px;
-      background: linear-gradient(135deg, #ff5e3a, #ff2e88);
-      display: flex;
-      align-items: center;
-      justify-content: center;
       flex-shrink: 0;
+      display: block;
     }
-    .logo svg { display: block; }
     .brand { font-size: 14px; font-weight: 600; letter-spacing: 0.01em; }
     .header-spacer { flex: 1; }
     .icon-btn {
@@ -87,7 +84,7 @@
       align-items: center;
       justify-content: center;
     }
-    .icon-btn:hover { background: var(--raised); color: var(--text); }
+    .icon-btn:hover { background: var(--hover); color: var(--text); }
     .icon-btn:active { transform: scale(0.96); }
 
     /* Tabs */
@@ -117,14 +114,14 @@
       bottom: -1px;
       height: 2px;
       border-radius: 2px;
-      background: linear-gradient(90deg, #ff5e3a, #ff2e88);
+      background: var(--accent);
     }
 
     /* Panels */
     main { max-height: 500px; overflow-y: auto; }
     main::-webkit-scrollbar { width: 8px; }
-    main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    main::-webkit-scrollbar-thumb:hover { background: #3a3f4b; }
+    main::-webkit-scrollbar-thumb { background: #cdd8d4; border-radius: 4px; }
+    main::-webkit-scrollbar-thumb:hover { background: #b9c6c1; }
     main::-webkit-scrollbar-track { background: transparent; }
     .panel { display: none; padding: 14px 16px 16px; }
     .panel.active { display: block; }
@@ -153,10 +150,10 @@
       display: none;
       padding: 2px 8px;
       border-radius: 99px;
-      background: var(--accent-soft);
-      color: var(--accent-text);
+      background: var(--yellow-soft);
+      color: var(--yellow-text);
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
     }
     .badge.show { display: inline-block; }
 
@@ -224,7 +221,7 @@
       border-radius: 6px;
       flex-shrink: 0;
     }
-    .row-btn:hover { background: var(--raised); }
+    .row-btn:hover { background: var(--hover); }
     .row-btn.danger { color: var(--error); }
     .empty {
       padding: 14px 0;
@@ -280,15 +277,15 @@
       cursor: pointer;
     }
     .btn:active { transform: translateY(1px); }
-    .btn-primary { background: var(--grad); color: var(--on-accent); }
-    .btn-primary:hover { background: var(--grad-hover); }
+    .btn-primary { background: var(--accent); color: var(--on-accent); }
+    .btn-primary:hover { background: var(--accent-hover); }
     .btn-ghost {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text);
       font-weight: 500;
     }
-    .btn-ghost:hover { background: var(--raised); }
+    .btn-ghost:hover { background: var(--hover); }
     .btn-add {
       background: transparent;
       border: 1px dashed var(--border);
@@ -314,19 +311,13 @@
       transition: opacity 0.18s ease;
     }
     .banner.show { opacity: 1; }
-    .banner.success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52, 192, 124, 0.3); }
-    .banner.error { background: var(--error-bg); color: var(--error); border: 1px solid rgba(229, 72, 77, 0.3); }
+    .banner.success { background: #e3f5ea; color: var(--success); border: 1px solid rgba(22, 163, 74, 0.35); }
+    .banner.error { background: #fdeaea; color: var(--error); border: 1px solid rgba(220, 60, 65, 0.3); }
   </style>
 </head>
 <body>
   <header>
-    <div class="logo" aria-hidden="true">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <rect x="1" y="2" width="10" height="2" rx="1" fill="#1c0708"/>
-        <rect x="1" y="6" width="7" height="2" rx="1" fill="#1c0708"/>
-        <rect x="1" y="10" width="4" height="2" rx="1" fill="#1c0708"/>
-      </svg>
-    </div>
+    <img class="logo" src="icons/icon48.png" alt="" width="22" height="22">
     <span class="brand">Form Buddy</span>
     <span class="header-spacer"></span>
     <button class="icon-btn" id="exportBtn" title="Export profile (available in a later phase)" aria-label="Export profile">
