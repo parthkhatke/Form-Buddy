@@ -154,6 +154,48 @@ async function deleteCustomField(id) {
   showBanner('Field deleted', 'success');
 }
 
+/* ---------- autofill ---------- */
+
+let autofillBusy = false;
+
+async function updateStats(filledCount) {
+  const data = await chrome.storage.local.get('stats');
+  const today = new Date().toDateString();
+  let stats = data.stats || { fieldsToday: 0, formsToday: 0, lastDate: '' };
+  if (stats.lastDate !== today) {
+    stats = { fieldsToday: 0, formsToday: 0, lastDate: today };
+  }
+  stats.fieldsToday += filledCount;
+  if (filledCount > 0) stats.formsToday += 1;
+  await chrome.storage.local.set({ stats });
+}
+
+async function runAutofill() {
+  if (autofillBusy) return;
+  autofillBusy = true;
+  const btn = $('autofillBtn');
+  btn.disabled = true;
+  try {
+    const groups = { fixed: $('groupFixed').checked, custom: $('groupCustom').checked };
+    const data = await chrome.storage.local.get(['profile', 'customFields']);
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      action: 'fill',
+      profile: data.profile || {},
+      customFields: data.customFields || [],
+      groups,
+    });
+    const count = (response && response.filled) || 0;
+    showBanner(count > 0 ? 'Filled ' + count + ' fields ✓' : 'Filled 0 fields', 'success');
+    await updateStats(count);
+  } catch (e) {
+    showBanner('Could not reach this page. Reload the tab and try again.', 'error');
+  } finally {
+    autofillBusy = false;
+    btn.disabled = false;
+  }
+}
+
 /* ---------- tabs ---------- */
 
 function activateTab(name) {
@@ -189,6 +231,7 @@ function wireEvents() {
   $('saveBtn').addEventListener('click', () => saveProfile(true));
   $('addFieldBtn').addEventListener('click', () => openFieldForm(null));
   $('fieldSaveBtn').addEventListener('click', saveFieldForm);
+  $('autofillBtn').addEventListener('click', runAutofill);
   $('fieldCancelBtn').addEventListener('click', closeFieldForm);
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => activateTab(tab.dataset.tab));

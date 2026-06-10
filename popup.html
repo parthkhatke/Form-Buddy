@@ -233,6 +233,28 @@
       border-bottom: 1px solid var(--border);
     }
 
+    /* Autofill tab */
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 2px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .check-row input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .check-hint {
+      margin-left: auto;
+      color: var(--placeholder);
+      font-size: 11px;
+    }
+    .btn:disabled { opacity: 0.55; cursor: default; }
+
     /* Add / edit field form */
     .field-form {
       display: none;
@@ -384,7 +406,22 @@
     </section>
 
     <section class="panel" id="panel-autofill">
-      <div class="placeholder-panel">Coming in next phase</div>
+      <div class="section-head">
+        <span class="section-title">Fill groups</span>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" id="groupFixed" checked>
+        <span>Fixed fields</span>
+        <span class="check-hint">name, email, phone, city</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" id="groupCustom" checked>
+        <span>Custom fields</span>
+        <span class="check-hint">your saved fields</span>
+      </label>
+      <div class="save-wrap">
+        <button class="btn btn-primary" id="autofillBtn">Autofill Page</button>
+      </div>
     </section>
 
     <section class="panel" id="panel-history">
