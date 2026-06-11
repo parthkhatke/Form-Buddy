@@ -14,6 +14,10 @@ const SKIP_TYPES = ['file', 'hidden', 'password', 'submit', 'button', 'image', '
 // elements that already have a change listener attached for site memory recording
 const recordingAttached = new WeakSet();
 
+// true while fillPage is dispatching synthetic events: the engine's own
+// fills must never be recorded as user corrections
+let engineFilling = false;
+
 /* ---------- helpers ---------- */
 
 function getHostKey() {
@@ -36,14 +40,26 @@ function getLabelText(el) {
   return '';
 }
 
-function buildHaystack(el) {
+function buildAttrHaystack(el) {
   return [
     el.getAttribute('autocomplete') || '',
     el.name || '',
     el.id || '',
     el.getAttribute('placeholder') || '',
-    getLabelText(el),
   ].join(' ').toLowerCase();
+}
+
+// full haystack (custom field keywords): attributes + complete label text
+function buildHaystack(el) {
+  return buildAttrHaystack(el) + ' ' + getLabelText(el).toLowerCase();
+}
+
+// safe haystack (fixed keyword map): long or question-style labels are
+// excluded - "remain in your current location?" must not match "city"
+function buildSafeHaystack(el) {
+  const label = getLabelText(el);
+  const safeLabel = (label.length <= 50 && !label.includes('?')) ? label.toLowerCase() : '';
+  return buildAttrHaystack(el) + ' ' + safeLabel;
 }
 
 // Approach B identifier for a text/select field: first non-empty of
@@ -70,8 +86,9 @@ function shouldSkip(el) {
 // Custom fields are checked BEFORE the fixed keyword map: user-defined
 // keywords are deliberate and must win over generic ones (the fixed
 // "phone" keyword "number" would otherwise claim a "Passport Number" field).
-function matchValue(haystack, profile, customFields, groups) {
+function matchValue(el, profile, customFields, groups) {
   if (groups.custom) {
+    const haystack = buildHaystack(el);
     for (const field of customFields) {
       if (!field.value) continue;
       for (const keyword of field.keywords) {
@@ -80,11 +97,14 @@ function matchValue(haystack, profile, customFields, groups) {
     }
   }
   if (groups.fixed) {
+    // token matching, not substring: "city" must not match "ethnicity",
+    // while "tel" still matches "telephone" via the prefix rule
+    const tokens = buildSafeHaystack(el).split(/[^a-z0-9]+/).filter((t) => t !== '');
     for (const [profileKey, keywords] of Object.entries(FIXED_KEYWORDS)) {
       const value = profile[profileKey];
       if (!value) continue;
       for (const keyword of keywords) {
-        if (haystack.includes(keyword)) return value;
+        if (tokens.some((t) => t === keyword || t.startsWith(keyword))) return value;
       }
     }
   }
@@ -236,7 +256,7 @@ function selectRadio(radio) {
 }
 
 async function saveToSiteMemory(identifier, value) {
-  if (!identifier) return;
+  if (!identifier || engineFilling) return;
   const data = await chrome.storage.local.get('siteMemory');
   const siteMemory = data.siteMemory || {};
   const host = getHostKey();
@@ -365,6 +385,8 @@ async function fillPage(profile, customFields, groups) {
   const radios = [];
   const elements = collectFields(document);
 
+  engineFilling = true;
+  try {
   for (const el of elements) {
     const tag = el.tagName.toLowerCase();
     const type = (el.type || '').toLowerCase();
@@ -390,7 +412,7 @@ async function fillPage(profile, customFields, groups) {
     const remembered = identifier && siteMem[identifier] !== undefined ? siteMem[identifier] : null;
     const value = (remembered !== null && remembered !== '')
       ? remembered
-      : matchValue(buildHaystack(el), profile, customFields, groups);
+      : matchValue(el, profile, customFields, groups);
 
     if (value !== null) {
       if (tag === 'select') {
@@ -404,6 +426,9 @@ async function fillPage(profile, customFields, groups) {
   }
 
   filled += fillRadioGroups(radios, siteMem, customFields, groups);
+  } finally {
+    engineFilling = false;
+  }
   return filled;
 }
 
